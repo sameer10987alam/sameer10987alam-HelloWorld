@@ -1,0 +1,303 @@
+package com.example.loanorigination.entities;
+
+import com.example.loanorigination.entities.enums.Role;
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "users")
+public class User {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true)
+    private String username; // can be email or ID
+
+    @Column(nullable = false)
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    private Role role; // CUSTOMER / MAKER / CHECKER
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Customer customer;
+
+    // getters & setters
+}
+
+
+
+
+package com.example.loanorigination.entities;
+
+import com.example.loanorigination.entities.enums.*;
+import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.time.Period;
+import java.util.List;
+
+@Entity
+@Table(name = "customers")
+public class Customer {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String firstName;
+    private String middleName;
+    private String lastName;
+    private String phone;
+    private String email;
+
+    private String currentAddress;
+    private String permanentAddress;
+
+    @Enumerated(EnumType.STRING)
+    private MaritalStatus maritalStatus;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    private LocalDate dateOfBirth;
+
+    @Transient
+    public int getAge() {
+        return dateOfBirth != null ? Period.between(dateOfBirth, LocalDate.now()).getYears() : 0;
+    }
+
+    private String aadhaarNumber;
+    private String panNumber;
+    private String passportNumber;
+    private String fatherName;
+    private String education;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LoanApplication> applications;
+
+    // getters & setters
+}
+
+
+
+
+package com.example.loanorigination.entities;
+
+import com.example.loanorigination.entities.enums.*;
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Entity
+@Table(name = "loan_applications")
+public class LoanApplication {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true)
+    private String applicationCode; // e.g., LA2025001
+
+    @ManyToOne
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+
+    @Enumerated(EnumType.STRING)
+    private LoanType loanType;
+
+    @Enumerated(EnumType.STRING)
+    private ApplicationStatus status = ApplicationStatus.DRAFT;
+
+    private BigDecimal loanAmountRequired;
+    private Integer loanDurationMonths;
+    private String purpose;
+
+    private Integer cibilScore;
+    private String cibilFile;
+    private LocalDateTime submittedDate;
+
+    private String makerComments;
+    private String checkerComments;
+
+    // Relationships
+    @OneToOne(mappedBy = "loanApplication", cascade = CascadeType.ALL)
+    private EmploymentDetails employmentDetails;
+
+    @OneToOne(mappedBy = "loanApplication", cascade = CascadeType.ALL)
+    private LoanDetails loanDetails;
+
+    @OneToMany(mappedBy = "loanApplication", cascade = CascadeType.ALL)
+    private List<Document> documents;
+
+    @OneToMany(mappedBy = "loanApplication", cascade = CascadeType.ALL)
+    private List<ExistingLoan> existingLoans;
+
+    @OneToMany(mappedBy = "loanApplication", cascade = CascadeType.ALL)
+    private List<Reference> references;
+
+    // getters & setters
+}
+
+
+
+package com.example.loanorigination.entities;
+
+import com.example.loanorigination.entities.enums.OccupationType;
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "employment_details")
+public class EmploymentDetails {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Enumerated(EnumType.STRING)
+    private OccupationType occupationType;
+
+    // Salaried fields
+    private String employerName;
+    private String designation;
+    private Double totalWorkExperience;
+    private String officeAddress;
+    private Double monthlyIncome;
+    private String employmentProof; // file name or reference
+
+    // Self-employed fields
+    private String businessName;
+    private String gstNumber;
+    private String registrationCertificate;
+    private Double annualTurnover;
+
+    @OneToOne
+    @JoinColumn(name = "loan_application_id")
+    private LoanApplication loanApplication;
+
+    // getters & setters
+}
+
+
+
+package com.example.loanorigination.entities;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "loan_details")
+public class LoanDetails {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private BigDecimal propertyValue;
+    private BigDecimal downPayment;
+    private Double interestRate;
+    private BigDecimal processingFee;
+    private Boolean insuranceRequired;
+
+    private String propertyType;
+    private String builderName;
+    private String projectName;
+    private String propertyLocation;
+
+    private String vehicleModel;
+    private String dealerName;
+    private String invoiceNumber;
+
+    @OneToOne
+    @JoinColumn(name = "loan_application_id")
+    private LoanApplication loanApplication;
+}
+
+
+package com.example.loanorigination.entities;
+
+import com.example.loanorigination.entities.enums.DocumentType;
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "documents")
+public class Document {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String documentName;
+    private String filePath;
+    private boolean verified = false;
+
+    @Enumerated(EnumType.STRING)
+    private DocumentType type;
+
+    @ManyToOne
+    @JoinColumn(name = "loan_application_id")
+    private LoanApplication loanApplication;
+}
+
+
+package com.example.loanorigination.entities;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "existing_loans")
+public class ExistingLoan {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String loanType;
+    private String lender;
+    private BigDecimal outstandingAmount;
+    private BigDecimal emi;
+    private Integer tenureRemaining;
+
+    @ManyToOne
+    @JoinColumn(name = "loan_application_id")
+    private LoanApplication loanApplication;
+}
+
+
+package com.example.loanorigination.entities;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "references")
+public class Reference {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name;
+    private String relationship;
+    private String contactNumber;
+    private String address;
+
+    @ManyToOne
+    @JoinColumn(name = "loan_application_id")
+    private LoanApplication loanApplication;
+}
+
+
+
+package com.example.loanorigination.entities;
+
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "notifications")
+public class Notification {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String message;
+    private String recipientRole; // CUSTOMER, MAKER, CHECKER
+    private boolean readStatus = false;
+    private LocalDateTime timestamp = LocalDateTime.now();
+
+    @ManyToOne
+    @JoinColumn(name = "loan_application_id")
+    private LoanApplication loanApplication;
+}
+
+
